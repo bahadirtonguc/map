@@ -1,18 +1,21 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Breakbulk Carrier Map</title>
+  <title>Breakbulk Sea Routes</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
+  <!-- 🔥 GEODESIC (en önemli kısım) -->
+  <script src="https://unpkg.com/leaflet.geodesic"></script>
+
   <style>
     body { margin:0; }
     #map { height: 100vh; }
 
-    .legend {
+    .legend, .controls {
       background: white;
       padding: 10px;
       border-radius: 6px;
@@ -24,12 +27,7 @@
       position: absolute;
       top: 10px;
       left: 10px;
-      background: white;
-      padding: 10px;
-      border-radius: 6px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.2);
       z-index: 1000;
-      font-size: 14px;
     }
   </style>
 </head>
@@ -47,7 +45,7 @@
 
 <script>
 
-// MAP INIT
+// MAP
 const map = L.map('map').setView([25, -30], 3);
 
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
@@ -60,12 +58,14 @@ const layers = {
   volans: L.layerGroup().addTo(map)
 };
 
-// DRAW FUNCTION
+// 🔥 GEODESIC DRAW
 function draw(group, points, color, label) {
-  const line = L.polyline(points, {
+  const line = L.geodesic(points, {
+    weight: 3,
     color: color,
-    weight: 3
+    steps: 80
   });
+
   line.bindPopup(label);
   layers[group].addLayer(line);
 }
@@ -101,7 +101,7 @@ function toggleLayer(name) {
   }
 }
 
-// PORT MARKERS
+// PORTS
 const ports = {
   Antwerp: [51.26,4.40],
   Rotterdam: [51.95,4.14],
