@@ -1,88 +1,136 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Breakbulk Sea Routes</title>
+  <title>Breakbulk Network Map</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-  <!-- GEODESIC (çalışmazsa fallback devreye girer) -->
-  <script src="https://unpkg.com/leaflet.geodesic@2.7.0/dist/leaflet.geodesic.min.js"></script>
-
   <style>
     body { margin:0; }
     #map { height: 100vh; }
+    .legend, .controls {
+      background: white;
+      padding: 10px;
+      border-radius: 6px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+      font-size: 14px;
+    }
+    .controls {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 1000;
+    }
   </style>
 </head>
 <body>
 
 <div id="map"></div>
 
+<div class="controls">
+  <b>Carriers</b><br>
+  <label><input type="checkbox" checked onchange="toggle('onego')"> ONEGO</label><br>
+  <label><input type="checkbox" checked onchange="toggle('intermarine')"> INTERMARINE</label><br>
+  <label><input type="checkbox" checked onchange="toggle('macs')"> MACS</label><br>
+  <label><input type="checkbox" checked onchange="toggle('volans')"> VOLANS</label><br>
+  <label><input type="checkbox" checked onchange="toggle('arc')"> ARC</label>
+</div>
+
 <script>
 
 // MAP
-const map = L.map('map').setView([25, -30], 3);
+const map = L.map('map').setView([20, -30], 3);
 
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
 
-// 🔥 DRAW (fallback’li)
-function draw(points, color, label) {
-
-  let line;
-
-  if (L.geodesic) {
-    // geodesic varsa
-    line = L.geodesic(points, {
-      weight: 3,
-      color: color,
-      steps: 80
-    });
-  } else {
-    // fallback (garanti çalışır)
-    line = L.polyline(points, {
-      color: color,
-      weight: 3
-    });
-  }
-
-  line.addTo(map).bindPopup(label);
-}
-
-// ROUTES LOAD
-async function loadRoutes() {
-
-  const res = await fetch('/routes.json');
-  const routes = await res.json();
-
-  draw(routes.onego_antwerp_houston, "red", "ONEGO Antwerp → Houston");
-  draw(routes.onego_rotterdam_nola, "red", "ONEGO Rotterdam → New Orleans");
-
-  draw(routes.macs_hamburg_veracruz, "green", "MACS Hamburg → Veracruz");
-
-  draw(routes.arc_europe_us, "purple", "ARC Europe → US");
-
-  draw(routes.volans_rotterdam_callao, "orange", "VOLANS Rotterdam → Callao");
-}
-
-loadRoutes();
-
-// PORTS
-const ports = {
-  Antwerp: [51.26,4.40],
-  Rotterdam: [51.95,4.14],
-  Hamburg: [53.55,9.99],
-  Houston: [29.73,-95.27],
-  "New Orleans": [29.95,-90.07],
-  Veracruz: [19.20,-96.14],
-  Baltimore: [39.27,-76.61],
-  Callao: [-12.0,-77.0]
+// LAYERS
+const layers = {
+  onego: L.layerGroup().addTo(map),
+  intermarine: L.layerGroup().addTo(map),
+  macs: L.layerGroup().addTo(map),
+  volans: L.layerGroup().addTo(map),
+  arc: L.layerGroup().addTo(map)
 };
 
-for (const p in ports) {
-  L.marker(ports[p]).addTo(map).bindPopup(p);
+// ZONES (merkez noktalar)
+const zones = {
+  europe: [51.5, 4.0],
+  us_gulf: [29.7, -95.0],
+  us_east: [36.0, -75.0],
+  mexico: [22.0, -97.0],
+  caribbean: [15.0, -75.0],
+  wcsa: [-20.0, -75.0],
+  ecsa: [-23.0, -45.0],
+  africa: [6.0, 3.0]
+};
+
+// FLOW çizimi (kalın hat)
+function flow(group, from, to, color, weight, label) {
+  const line = L.polyline([from, to], {
+    color: color,
+    weight: weight,
+    opacity: 0.7
+  }).addTo(layers[group]).bindPopup(label);
 }
+
+// --------- FLOWS ---------
+
+// ONEGO (EU → US Gulf / East / Mexico)
+flow("onego", zones.europe, zones.us_gulf, "red", 6, "ONEGO → US Gulf");
+flow("onego", zones.europe, zones.us_east, "red", 4, "ONEGO → US East");
+flow("onego", zones.europe, zones.mexico, "red", 3, "ONEGO → Mexico");
+
+// INTERMARINE (Houston hub → Americas)
+flow("intermarine", zones.us_gulf, zones.caribbean, "blue", 5, "INTERMARINE → Caribbean");
+flow("intermarine", zones.us_gulf, zones.wcsa, "blue", 4, "INTERMARINE → WCSA");
+flow("intermarine", zones.us_gulf, zones.ecsa, "blue", 3, "INTERMARINE → ECSA");
+
+// MACS (EU → Africa + LATAM)
+flow("macs", zones.europe, zones.africa, "green", 6, "MACS → West Africa");
+flow("macs", zones.europe, zones.mexico, "green", 3, "MACS → Mexico");
+
+// VOLANS (EU → WCSA)
+flow("volans", zones.europe, zones.wcsa, "orange", 5, "VOLANS → WCSA");
+
+// ARC (Transatlantic RoRo)
+flow("arc", zones.europe, zones.us_east, "purple", 6, "ARC → US East");
+flow("arc", zones.europe, zones.us_gulf, "purple", 4, "ARC → US Gulf");
+
+// --------- ZONE MARKERS ---------
+
+for (const z in zones) {
+  L.circleMarker(zones[z], {
+    radius: 6,
+    color: "#333",
+    fillColor: "#666",
+    fillOpacity: 0.8
+  }).addTo(map).bindPopup(z.toUpperCase());
+}
+
+// TOGGLE
+function toggle(name) {
+  if (map.hasLayer(layers[name])) {
+    map.removeLayer(layers[name]);
+  } else {
+    map.addLayer(layers[name]);
+  }
+}
+
+// LEGEND
+const legend = L.control({position:'bottomleft'});
+legend.onAdd = function () {
+  const div = L.DomUtil.create('div','legend');
+  div.innerHTML = `
+    <b>Flow Intensity</b><br>
+    Thick = High volume<br>
+    Thin = Lower volume
+  `;
+  return div;
+};
+legend.addTo(map);
 
 </script>
 
