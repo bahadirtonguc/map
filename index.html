@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Breakbulk Carrier Intelligence Map</title>
+  <title>Breakbulk Sea Routes</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -11,20 +11,12 @@
   <style>
     body { margin:0; }
     #map { height: 100vh; }
-
-    .legend, .controls {
+    .legend {
       background: white;
       padding: 10px;
-      font-size: 14px;
       border-radius: 6px;
       box-shadow: 0 0 10px rgba(0,0,0,0.2);
-    }
-
-    .controls {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      z-index: 1000;
+      font-size: 14px;
     }
   </style>
 </head>
@@ -32,156 +24,71 @@
 
 <div id="map"></div>
 
-<div class="controls">
-  <b>Carriers</b><br>
-  <label><input type="checkbox" checked onclick="toggle('onego')"> ONEGO</label><br>
-  <label><input type="checkbox" checked onclick="toggle('intermarine')"> INTERMARINE</label><br>
-  <label><input type="checkbox" checked onclick="toggle('macs')"> MACS</label><br>
-  <label><input type="checkbox" checked onclick="toggle('volans')"> VOLANS</label><br>
-  <label><input type="checkbox" checked onclick="toggle('arc')"> ARC</label>
-</div>
-
 <script>
-
 // MAP
-var map = L.map('map').setView([25, -30], 3);
+const map = L.map('map').setView([25, -30], 3);
 
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
 
-// LAYER GROUPS
-const layers = {
-  onego: L.layerGroup().addTo(map),
-  intermarine: L.layerGroup().addTo(map),
-  macs: L.layerGroup().addTo(map),
-  volans: L.layerGroup().addTo(map),
-  arc: L.layerGroup().addTo(map)
-};
+// API ROUTE DRAW
+async function drawRealRoute(from, to, color, label) {
+  try {
+    const res = await fetch(`/api/route?from=${from}&to=${to}`);
+    const data = await res.json();
 
-// DRAW FUNCTION
-function drawRoute(group, points, color, carrier, from, to, cargo, type) {
+    const coords = data.map(c => [c[1], c[0]]);
 
-  const line = L.polyline(points, {
-    color: color,
-    weight: 3
-  });
+    L.polyline(coords, {
+      color: color,
+      weight: 3
+    }).addTo(map).bindPopup(label);
 
-  line.bindPopup(`
-    <b>${carrier}</b><br>
-    Route: ${from} → ${to}<br>
-    Cargo: ${cargo}<br>
-    Type: ${type}
-  `);
-
-  layers[group].addLayer(line);
-}
-
-// ======================
-// ONEGO (liner corridors)
-// ======================
-
-drawRoute("onego", [
-  [51.26,4.40],[50.5,-1],[40,-30],[29.73,-95.27]
-], "red", "ONEGO", "Antwerp", "Houston", "Steel / Breakbulk", "Liner");
-
-drawRoute("onego", [
-  [51.95,4.14],[50.5,-1],[40,-30],[29.95,-90.07]
-], "red", "ONEGO", "Rotterdam", "New Orleans", "Steel / Breakbulk", "Liner");
-
-// ======================
-// INTERMARINE (hub-spoke)
-// ======================
-
-drawRoute("intermarine", [
-  [29.73,-95.27],[10.4,-75.5],[11,-74.8],[11.2,-74.2]
-], "blue", "INTERMARINE", "Houston", "NCSA", "Project Cargo", "Hub Service");
-
-drawRoute("intermarine", [
-  [29.73,-95.27],[-12,-77],[-33,-71]
-], "blue", "INTERMARINE", "Houston", "WCSA", "Project Cargo", "Hub Service");
-
-// ======================
-// MACS (ex-Stinnes)
-// ======================
-
-drawRoute("macs", [
-  [51.26,4.40],[48,-5],[20,-20],[6.45,3.39]
-], "green", "MACS", "Antwerp", "West Africa", "Steel / Project", "MPP Liner");
-
-drawRoute("macs", [
-  [53.55,9.99],[50.5,-1],[35,-45],[19.2,-96.14]
-], "green", "MACS", "Hamburg", "Mexico", "General Cargo", "Regional");
-
-// ======================
-// VOLANS (South America loop)
-// ======================
-
-drawRoute("volans", [
-  [51.26,4.40],[43.26,-2.93],[11,-74],[-12,-77],[-33,-71],[51.26,4.40]
-], "orange", "VOLANS", "Europe", "WCSA Loop", "Project / BB", "Liner Loop");
-
-// ======================
-// ARC (transatlantic loop)
-// ======================
-
-drawRoute("arc", [
-  [29.73,-95.27],[31.15,-81.49],[39.27,-76.61],
-  [50.9,-1.4],[53.55,8.57],[51.33,3.2],
-  [39.27,-76.61],[29.73,-95.27]
-], "purple", "ARC", "US ↔ Europe", "Loop", "RoRo / Mafi", "Shuttle");
-
-// ======================
-// PORT MARKERS
-// ======================
-
-const ports = [
-  ["Antwerp",51.26,4.40],
-  ["Rotterdam",51.95,4.14],
-  ["Hamburg",53.55,9.99],
-  ["Houston",29.73,-95.27],
-  ["New Orleans",29.95,-90.07],
-  ["Baltimore",39.27,-76.61],
-  ["Lagos",6.45,3.39],
-  ["Veracruz",19.2,-96.14]
-];
-
-ports.forEach(p => {
-  L.marker([p[1],p[2]]).addTo(map).bindPopup(p[0]);
-});
-
-// ======================
-// TOGGLE FUNCTION
-// ======================
-
-function toggle(name) {
-  if (map.hasLayer(layers[name])) {
-    map.removeLayer(layers[name]);
-  } else {
-    map.addLayer(layers[name]);
+  } catch (err) {
+    console.error("Route error:", err);
   }
 }
 
-// ======================
+// ROUTES
+drawRealRoute("antwerp", "houston", "red", "ONEGO Antwerp → Houston");
+drawRealRoute("rotterdam", "neworleans", "red", "ONEGO Rotterdam → New Orleans");
+
+drawRealRoute("hamburg", "veracruz", "green", "MACS Hamburg → Veracruz");
+
+drawRealRoute("antwerp", "baltimore", "purple", "ARC Antwerp → Baltimore");
+
+drawRealRoute("rotterdam", "callao", "orange", "VOLANS Rotterdam → Callao");
+
+// PORT MARKERS
+const ports = {
+  Antwerp: [51.26,4.40],
+  Rotterdam: [51.95,4.14],
+  Hamburg: [53.55,9.99],
+  Houston: [29.73,-95.27],
+  "New Orleans": [29.95,-90.07],
+  Veracruz: [19.20,-96.14],
+  Baltimore: [39.27,-76.61],
+  Callao: [-12.0,-77.0]
+};
+
+for (const p in ports) {
+  L.marker(ports[p]).addTo(map).bindPopup(p);
+}
+
 // LEGEND
-// ======================
-
-const legend = L.control({position: 'bottomleft'});
-
+const legend = L.control({position:'bottomleft'});
 legend.onAdd = function () {
-  const div = L.DomUtil.create('div', 'legend');
+  const div = L.DomUtil.create('div','legend');
   div.innerHTML = `
-    <b>Legend</b><br>
+    <b>Carriers</b><br>
     <span style="color:red">●</span> ONEGO<br>
-    <span style="color:blue">●</span> INTERMARINE<br>
     <span style="color:green">●</span> MACS<br>
-    <span style="color:orange">●</span> VOLANS<br>
-    <span style="color:purple">●</span> ARC
+    <span style="color:purple">●</span> ARC<br>
+    <span style="color:orange">●</span> VOLANS
   `;
   return div;
 };
-
 legend.addTo(map);
 
 </script>
-
 </body>
 </html>
