@@ -1,7 +1,5 @@
 {
-  "name": "sea-route-app",
-  "version": "1.0.0",
-  "dependencies": {
-    "searoute": "^1.2.0"
-  }
+  "name": "map",
+  "private": true,
+  "version": "1.0.0"
 }
