@@ -18,72 +18,61 @@
 
 <script>
 
-const API_KEY = "BURAYA_API_KEY";
+// ROUTE FUNCTION
+function drawSeaRoute(points, color, carrierName, from, to) {
 
-var map = L.map('map').setView([30, -20], 3);
-
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
-// PORT KOORDINATLARI
-const ports = {
-  antwerp: {name:"Antwerp", coords:[4.40,51.26]},
-  rotterdam: {name:"Rotterdam", coords:[4.14,51.95]},
-  hamburg: {name:"Hamburg", coords:[9.99,53.55]},
-  houston: {name:"Houston", coords:[-95.27,29.73]},
-  neworleans: {name:"New Orleans", coords:[-90.07,29.95]},
-  mexico: {name:"Veracruz", coords:[-96.14,19.20]},
-  baltimore: {name:"Baltimore", coords:[-76.61,39.27]},
-  charleston: {name:"Charleston", coords:[-79.93,32.78]}
-};
-
-// ROUTE FONKSİYONU (DENİZ ROTASI)
-async function drawSeaRoute(from, to, color, carrierName) {
-
-  const url = `https://api.openrouteservice.org/v2/directions/driving-car/geojson`;
-
-  const body = {
-    coordinates: [
-      ports[from].coords,
-      ports[to].coords
-    ]
-  };
-
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Authorization": API_KEY,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(body)
-  });
-
-  const data = await res.json();
-
-  const route = data.features[0].geometry.coordinates.map(c => [c[1], c[0]]);
-
-  const line = L.polyline(route, {
+  const line = L.polyline(points, {
     color: color,
     weight: 3
   }).addTo(map);
 
   line.bindPopup(`
     <b>${carrierName}</b><br>
-    ${ports[from].name} → ${ports[to].name}
+    ${from} → ${to}
   `);
 }
 
 // ROUTES
-drawSeaRoute("antwerp","houston","red","ONEGO");
-drawSeaRoute("rotterdam","houston","red","ONEGO");
 
-drawSeaRoute("antwerp","houston","blue","INTERMARINE");
-drawSeaRoute("hamburg","houston","blue","INTERMARINE");
+// ONEGO
+drawSeaRoute([
+  [51.26, 4.40],   // Antwerp
+  [50.0, -5.0],    // Channel çıkış
+  [40.0, -30.0],   // Atlantic
+  [29.73, -95.27]  // Houston
+], "red", "ONEGO", "Antwerp", "Houston");
 
-drawSeaRoute("hamburg","mexico","green","STINNES");
+// INTERMARINE
+drawSeaRoute([
+  [53.55, 9.99],   // Hamburg
+  [50.0, -5.0],
+  [35.0, -40.0],
+  [29.73, -95.27]
+], "blue", "INTERMARINE", "Hamburg", "Houston");
 
-drawSeaRoute("antwerp","baltimore","purple","ARC");
+// STINNES (Mexico)
+drawSeaRoute([
+  [53.55, 9.99],
+  [50.0, -5.0],
+  [30.0, -50.0],
+  [19.20, -96.14]
+], "green", "STINNES", "Hamburg", "Veracruz");
 
-drawSeaRoute("antwerp","houston","orange","VOLANS");
+// ARC
+drawSeaRoute([
+  [51.26, 4.40],
+  [50.0, -5.0],
+  [40.0, -40.0],
+  [39.27, -76.61]
+], "purple", "ARC", "Antwerp", "Baltimore");
+
+// VOLANS
+drawSeaRoute([
+  [51.95, 4.14],
+  [50.0, -5.0],
+  [35.0, -45.0],
+  [29.73, -95.27]
+], "orange", "VOLANS", "Rotterdam", "Houston");
 
 </script>
 
