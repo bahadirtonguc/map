@@ -8,40 +8,17 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-  <!-- 🔥 GEODESIC (en önemli kısım) -->
-  <script src="https://unpkg.com/leaflet.geodesic"></script>
+  <!-- GEODESIC (çalışmazsa fallback devreye girer) -->
+  <script src="https://unpkg.com/leaflet.geodesic@2.7.0/dist/leaflet.geodesic.min.js"></script>
 
   <style>
     body { margin:0; }
     #map { height: 100vh; }
-
-    .legend, .controls {
-      background: white;
-      padding: 10px;
-      border-radius: 6px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.2);
-      font-size: 14px;
-    }
-
-    .controls {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      z-index: 1000;
-    }
   </style>
 </head>
 <body>
 
 <div id="map"></div>
-
-<div class="controls">
-  <b>Carriers</b><br>
-  <label><input type="checkbox" checked onchange="toggleLayer('onego')"> ONEGO</label><br>
-  <label><input type="checkbox" checked onchange="toggleLayer('macs')"> MACS</label><br>
-  <label><input type="checkbox" checked onchange="toggleLayer('arc')"> ARC</label><br>
-  <label><input type="checkbox" checked onchange="toggleLayer('volans')"> VOLANS</label>
-</div>
 
 <script>
 
@@ -50,56 +27,46 @@ const map = L.map('map').setView([25, -30], 3);
 
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
 
-// LAYERS
-const layers = {
-  onego: L.layerGroup().addTo(map),
-  macs: L.layerGroup().addTo(map),
-  arc: L.layerGroup().addTo(map),
-  volans: L.layerGroup().addTo(map)
-};
+// 🔥 DRAW (fallback’li)
+function draw(points, color, label) {
 
-// 🔥 GEODESIC DRAW
-function draw(group, points, color, label) {
-  const line = L.geodesic(points, {
-    weight: 3,
-    color: color,
-    steps: 80
-  });
+  let line;
 
-  line.bindPopup(label);
-  layers[group].addLayer(line);
+  if (L.geodesic) {
+    // geodesic varsa
+    line = L.geodesic(points, {
+      weight: 3,
+      color: color,
+      steps: 80
+    });
+  } else {
+    // fallback (garanti çalışır)
+    line = L.polyline(points, {
+      color: color,
+      weight: 3
+    });
+  }
+
+  line.addTo(map).bindPopup(label);
 }
 
-// LOAD ROUTES
+// ROUTES LOAD
 async function loadRoutes() {
 
   const res = await fetch('/routes.json');
   const routes = await res.json();
 
-  // ONEGO
-  draw("onego", routes.onego_antwerp_houston, "red", "ONEGO Antwerp → Houston");
-  draw("onego", routes.onego_rotterdam_nola, "red", "ONEGO Rotterdam → New Orleans");
+  draw(routes.onego_antwerp_houston, "red", "ONEGO Antwerp → Houston");
+  draw(routes.onego_rotterdam_nola, "red", "ONEGO Rotterdam → New Orleans");
 
-  // MACS
-  draw("macs", routes.macs_hamburg_veracruz, "green", "MACS Hamburg → Veracruz");
+  draw(routes.macs_hamburg_veracruz, "green", "MACS Hamburg → Veracruz");
 
-  // ARC
-  draw("arc", routes.arc_europe_us, "purple", "ARC Europe → US");
+  draw(routes.arc_europe_us, "purple", "ARC Europe → US");
 
-  // VOLANS
-  draw("volans", routes.volans_rotterdam_callao, "orange", "VOLANS Rotterdam → Callao");
+  draw(routes.volans_rotterdam_callao, "orange", "VOLANS Rotterdam → Callao");
 }
 
 loadRoutes();
-
-// TOGGLE
-function toggleLayer(name) {
-  if (map.hasLayer(layers[name])) {
-    map.removeLayer(layers[name]);
-  } else {
-    map.addLayer(layers[name]);
-  }
-}
 
 // PORTS
 const ports = {
@@ -116,23 +83,6 @@ const ports = {
 for (const p in ports) {
   L.marker(ports[p]).addTo(map).bindPopup(p);
 }
-
-// LEGEND
-const legend = L.control({position:'bottomleft'});
-
-legend.onAdd = function () {
-  const div = L.DomUtil.create('div','legend');
-  div.innerHTML = `
-    <b>Legend</b><br>
-    <span style="color:red">●</span> ONEGO<br>
-    <span style="color:green">●</span> MACS<br>
-    <span style="color:purple">●</span> ARC<br>
-    <span style="color:orange">●</span> VOLANS
-  `;
-  return div;
-};
-
-legend.addTo(map);
 
 </script>
 
