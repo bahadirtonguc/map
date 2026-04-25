@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Breakbulk Sea Routes</title>
+  <title>Breakbulk Carrier Routes</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -9,7 +9,16 @@
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
   <style>
+    body { margin:0; }
     #map { height: 100vh; }
+    .legend {
+      background: white;
+      padding: 10px;
+      line-height: 1.6;
+      font-size: 14px;
+      border-radius: 6px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    }
   </style>
 </head>
 <body>
@@ -18,8 +27,16 @@
 
 <script>
 
-// ROUTE FUNCTION
-function drawSeaRoute(points, color, carrierName, from, to) {
+// INIT MAP
+var map = L.map('map').setView([30, -30], 3);
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; OpenStreetMap'
+}).addTo(map);
+
+
+// ROUTE DRAW FUNCTION
+function drawRoute(points, color, carrier, from, to, cargo, type) {
 
   const line = L.polyline(points, {
     color: color,
@@ -27,52 +44,111 @@ function drawSeaRoute(points, color, carrierName, from, to) {
   }).addTo(map);
 
   line.bindPopup(`
-    <b>${carrierName}</b><br>
-    ${from} → ${to}
+    <b>${carrier}</b><br>
+    Route: ${from} → ${to}<br>
+    Cargo: ${cargo}<br>
+    Type: ${type}
   `);
 }
 
-// ROUTES
+
+// ======================
+// ROUTES (REALISTIC SEA CORRIDORS)
+// ======================
 
 // ONEGO
-drawSeaRoute([
-  [51.26, 4.40],   // Antwerp
-  [50.0, -5.0],    // Channel çıkış
-  [40.0, -30.0],   // Atlantic
-  [29.73, -95.27]  // Houston
-], "red", "ONEGO", "Antwerp", "Houston");
+drawRoute([
+  [51.26, 4.40],
+  [50.5, -1.0],
+  [48.0, -5.0],
+  [40.0, -25.0],
+  [32.0, -60.0],
+  [29.73, -95.27]
+], "red", "ONEGO", "Antwerp", "Houston", "Steel / Breakbulk", "Liner");
+
+drawRoute([
+  [51.95, 4.14],
+  [50.5, -1.0],
+  [40.0, -30.0],
+  [29.95, -90.07]
+], "red", "ONEGO", "Rotterdam", "New Orleans", "Steel / Breakbulk", "Liner");
+
 
 // INTERMARINE
-drawSeaRoute([
-  [53.55, 9.99],   // Hamburg
-  [50.0, -5.0],
-  [35.0, -40.0],
-  [29.73, -95.27]
-], "blue", "INTERMARINE", "Hamburg", "Houston");
-
-// STINNES (Mexico)
-drawSeaRoute([
+drawRoute([
   [53.55, 9.99],
-  [50.0, -5.0],
-  [30.0, -50.0],
+  [50.5, -1.0],
+  [35.0, -35.0],
+  [29.73, -95.27]
+], "blue", "INTERMARINE", "Hamburg", "Houston", "Project / Heavy Lift", "Project Carrier");
+
+
+// STINNES
+drawRoute([
+  [53.55, 9.99],
+  [50.5, -1.0],
+  [35.0, -45.0],
   [19.20, -96.14]
-], "green", "STINNES", "Hamburg", "Veracruz");
+], "green", "STINNES", "Hamburg", "Veracruz", "Steel / General Cargo", "Regional Liner");
+
 
 // ARC
-drawSeaRoute([
+drawRoute([
   [51.26, 4.40],
-  [50.0, -5.0],
+  [50.5, -1.0],
   [40.0, -40.0],
   [39.27, -76.61]
-], "purple", "ARC", "Antwerp", "Baltimore");
+], "purple", "ARC", "Antwerp", "Baltimore", "RoRo / Mafi", "RoRo Hybrid");
+
 
 // VOLANS
-drawSeaRoute([
+drawRoute([
   [51.95, 4.14],
-  [50.0, -5.0],
-  [35.0, -45.0],
+  [50.5, -1.0],
+  [35.0, -40.0],
   [29.73, -95.27]
-], "orange", "VOLANS", "Rotterdam", "Houston");
+], "orange", "VOLANS", "Rotterdam", "Houston", "Mixed / Project", "Semi-liner");
+
+
+// ======================
+// PORT MARKERS
+// ======================
+
+const ports = [
+  ["Antwerp", 51.26, 4.40],
+  ["Rotterdam", 51.95, 4.14],
+  ["Hamburg", 53.55, 9.99],
+  ["Houston", 29.73, -95.27],
+  ["New Orleans", 29.95, -90.07],
+  ["Veracruz", 19.20, -96.14],
+  ["Baltimore", 39.27, -76.61]
+];
+
+ports.forEach(p => {
+  L.marker([p[1], p[2]]).addTo(map).bindPopup(p[0]);
+});
+
+
+// ======================
+// LEGEND
+// ======================
+
+const legend = L.control({position: 'bottomleft'});
+
+legend.onAdd = function () {
+  const div = L.DomUtil.create('div', 'legend');
+  div.innerHTML = `
+    <b>Carriers</b><br>
+    <span style="color:red">●</span> ONEGO<br>
+    <span style="color:blue">●</span> INTERMARINE<br>
+    <span style="color:green">●</span> STINNES<br>
+    <span style="color:purple">●</span> ARC<br>
+    <span style="color:orange">●</span> VOLANS
+  `;
+  return div;
+};
+
+legend.addTo(map);
 
 </script>
 
