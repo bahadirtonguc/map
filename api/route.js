@@ -1,6 +1,6 @@
-import searoute from 'searoute';
+const searoute = require('searoute');
 
-export default function handler(req, res) {
+module.exports = (req, res) => {
 
   const { from, to } = req.query;
 
@@ -15,7 +15,14 @@ export default function handler(req, res) {
     callao: [-77.0, -12.0]
   };
 
-  const route = searoute(ports[from], ports[to]);
+  if (!ports[from] || !ports[to]) {
+    return res.status(400).json({ error: "Invalid ports" });
+  }
 
-  res.status(200).json(route.geometry.coordinates);
-}
+  try {
+    const route = searoute(ports[from], ports[to]);
+    res.status(200).json(route.geometry.coordinates);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+};
